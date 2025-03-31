@@ -43,6 +43,20 @@ public class CORStripes extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			while (doc_tokenizer.hasMoreTokens()) {
+				String Ori_word = doc_tokenizer.nextToken();
+				// If the word is already in the hashmap, add 1 to its frequency.
+				if (word_set.containsKey(Ori_word)) {
+					word_set.put(Ori_word, word_set.get(Ori_word) + 1);
+				} else {
+					// Otherwise, add it to the hashmap.
+					word_set.put(Ori_word, 1);
+				}
+			}
+			for (Map.Entry<String, Integer> entry : word_set.entrySet()) {
+				// Write the word and its frequency to context
+				context.write(new Text(entry.getKey()), new IntWritable(entry.getValue()));
+			}
 		}
 	}
 
@@ -56,6 +70,11 @@ public class CORStripes extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			int sum = 0;
+			for (IntWritable val : values) {
+				sum += val.get();
+			}
+			context.write(key, new IntWritable(sum));
 		}
 	}
 
@@ -75,6 +94,22 @@ public class CORStripes extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			MapWritable first_mapWritable = new MapWritable();
+			for (String word : sorted_word_set) {
+				for (String coWord : sorted_word_set) {
+					if (!word.equals(coWord)) {
+						IntWritable count = (IntWritable) first_mapWritable.get(new Text(coWord));
+						if (count == null) {
+							first_mapWritable.put(new Text(coWord), new IntWritable(1));
+						}
+						else {
+							count.set(count.get() + 1);
+						}
+					}
+				}
+				context.write(new Text(word), first_mapWritable);
+				first_mapWritable.clear();
+			}
 		}
 	}
 
@@ -89,6 +124,20 @@ public class CORStripes extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			MapWritable result_writable = new MapWritable();
+			for (MapWritable value : values) {
+				for (Map.Entry<Writable, Writable> entry : value.entrySet()) {
+					IntWritable count = (IntWritable) entry.getValue();
+					IntWritable existingCount = (IntWritable) result_writable.get(entry.getKey());
+					if (existingCount == null) {
+						result_writable.put(entry.getKey(), new IntWritable(count.get()));
+					}
+					else {
+						existingCount.set(existingCount.get() + count.get());
+					}
+				}
+			}
+			context.write(key,result_writable);
 		}
 	}
 
@@ -142,6 +191,34 @@ public class CORStripes extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			double totalCount = 0.0;
+			Map<String, Integer> appearence = new HashMap<String, Integer>();
+
+			for (MapWritable value : values) {
+				for (Writable coWord : value.keySet()) {
+					IntWritable count = (IntWritable) value.get(coWord);
+					String coWordStr = coWord.toString();
+
+					// Update appearence map without using getOrDefault
+					if (appearence.containsKey(coWordStr)) {
+						appearence.put(coWordStr, appearence.get(coWordStr) + count.get());
+					} else {
+						appearence.put(coWordStr, count.get());
+					}
+				}
+				totalCount++; 
+			}
+
+			for (Map.Entry<String, Integer> entry : appearence.entrySet()) {
+				String coWord = entry.getKey();
+				int co_Freq = entry.getValue();
+				int total_Freq = word_total_map.containsKey(coWord) ? word_total_map.get(coWord) : 0;
+
+				if (totalCount > 0 && total_Freq > 0) {
+					double correlation = (double) co_Freq / (totalCount * total_Freq);
+					context.write(new PairOfStrings(key.toString(), coWord), new DoubleWritable(correlation));
+				}
+			}
 		}
 	}
 

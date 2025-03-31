@@ -103,19 +103,17 @@ public class CORPairs extends Configured implements Tool {
 			 * TODO: Your implementation goes here.
 			 */
 			HashSet<String> uniqueWords = new HashSet<String>();
-			// Get all unique words
 			while (doc_tokenizer.hasMoreTokens()) {
 				uniqueWords.add(doc_tokenizer.nextToken());
 			}
-			String[] words = uniqueWords.toArray(new String[0]);
-			for (int i = 0; i < words.length; i++) {
-				for (int j = i + 1; j < words.length; j++) {
-					String wordA = words[i];
-					String wordB = words[j];
-					// Sort the words
-					String first = wordA.compareTo(wordB) < 0 ? wordA : wordB;
-					String second = wordA.compareTo(wordB) < 0 ? wordB : wordA;
-					pair.set(first,second);
+			String[] Total_words = uniqueWords.toArray(new String[0]);
+			for (int i = 0; i < Total_words.length; i++) {
+				for (int j = i + 1; j < Total_words.length; j++) {
+					String A_word = Total_words[i];
+					String B_word = Total_words[j];
+					String First = A_word.compareTo(B_word) < 0 ? A_word : B_word;
+					String Second = A_word.compareTo(B_word) < 0 ? B_word : A_word;
+					pair.set(First,Second);
 					context.write(pair, ONE);
 				}
 			}
@@ -199,15 +197,15 @@ public class CORPairs extends Configured implements Tool {
 			// 	context.write(key, new DoubleWritable(cor));
 			// }
 
-			int freqAB = 0;
+			int pairCount = 0;
 			for (IntWritable value : values) {
-				freqAB += value.get();
+				pairCount += value.get();
 			}
 
-			Integer freqA = word_total_map.get(key.getLeftElement());
-			Integer freqB = word_total_map.get(key.getRightElement());
-			if (freqA != null && freqB != null && freqA > 0 && freqB > 0) {
-				double correlation = (double) freqAB / (freqA * freqB);
+			Integer freq_A = word_total_map.get(key.getLeftElement());
+			Integer freq_B = word_total_map.get(key.getRightElement());
+			if (freq_A != null && freq_B != null && freq_A > 0 && freq_B > 0) {
+				double correlation = (double) pairCount / (freq_A * freq_B);
 				context.write(key, new DoubleWritable(correlation));
 			}
 		}
