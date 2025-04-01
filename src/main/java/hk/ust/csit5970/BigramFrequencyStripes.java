@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Iterator;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -65,6 +64,7 @@ public class BigramFrequencyStripes extends Configured implements Tool {
 						continue;
 					}
 					STRIPE.increment(w);
+					STRIPE.increment("");
 					context.write(KEY, STRIPE);
 					KEY.set(w);
 					STRIPE.clear();
@@ -83,7 +83,7 @@ public class BigramFrequencyStripes extends Configured implements Tool {
 		private final static HashMapStringIntWritable SUM_STRIPES = new HashMapStringIntWritable();
 		private final static PairOfStrings BIGRAM = new PairOfStrings();
 		private final static FloatWritable FREQ = new FloatWritable();
-		private int con_number;
+		private float con_number;
 
 		@Override
 		public void reduce(Text key,
@@ -93,33 +93,29 @@ public class BigramFrequencyStripes extends Configured implements Tool {
 			 * TODO: Your implementation goes here.
 			 */
 			Iterator<HashMapStringIntWritable> iter = stripes.iterator();
-			String lw = key.toString();
+			String lw = key.toString(); 
 			while (iter.hasNext()) {
 				SUM_STRIPES.plus(iter.next());
 			}
-			for (Map.Entry<String, Integer> mapElement : SUM_STRIPES.entrySet()) {
-				String rw = mapElement.getKey();
-				if ("".equals(rw)){
-					con_number = (int) mapElement.getValue();
+	        for (Entry<String, Integer> mapElement : SUM_STRIPES.entrySet()) { 
+	            String rw = (String) mapElement.getKey(); 
+				int value = (int) mapElement.getValue(); 
+
+				if(rw.equals("")){
 					BIGRAM.set(lw, rw);
-					FREQ.set((float)con_number);
+					// set total
+					con_number = value;
+					FREQ.set(con_number);
 					context.write(BIGRAM, FREQ);
+				}else{
+	            	BIGRAM.set(lw, rw);
+	            	FREQ.set(value/con_number);
+	            	context.write(BIGRAM, FREQ);
 				}
-				else continue;
-			}
-			for (Map.Entry<String, Integer> mapElement : SUM_STRIPES.entrySet()) {
-				String rw = (String) mapElement.getKey();
-				if ("".equals(rw)){
-					continue;
-				}
-				else{
-					int value = (int) mapElement.getValue();
-					BIGRAM.set(lw, rw);
-					FREQ.set((float) value / ((int)2* con_number));
-					context.write(BIGRAM, FREQ);
-				}
-			}
-			SUM_STRIPES.clear();
+
+	        }
+	        
+	        SUM_STRIPES.clear();
 			
 		}
 	}
